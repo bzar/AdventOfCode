@@ -1,6 +1,6 @@
 use nom::FindSubstring;
 
-const PUZZLE_INPUT: &str = include_str!("day01.txt");
+const PUZZLE_INPUT: &str = include_str!("../data/day01.txt");
 
 fn part1(input: &str) -> u32 {
     input
@@ -98,8 +98,8 @@ fn main() {
 #[cfg(test)]
 mod test_day01 {
     use super::*;
-    const TEST_INPUT: &str = include_str!("day01_test.txt");
-    const TEST_INPUT_2: &str = include_str!("day01_test_2.txt");
+    const TEST_INPUT: &str = include_str!("../data/day01_test.txt");
+    const TEST_INPUT_2: &str = include_str!("../data/day01_test_2.txt");
     #[test]
     fn test_part1() {
         assert_eq!(part1(TEST_INPUT), 142);
