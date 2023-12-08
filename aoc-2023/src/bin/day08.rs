@@ -6,6 +6,7 @@ use nom::{
     sequence::{separated_pair, terminated, tuple},
     Finish,
 };
+use num::Integer;
 use std::collections::HashMap;
 
 const PUZZLE_INPUT: &str = include_str!("../data/day08.txt");
@@ -66,10 +67,11 @@ fn find_pattern(start: &str, instructions: &str, map: &Map) -> (usize, usize) {
     (first, second - first)
 }
 fn combine_patterns(
-    (start1, repeat1): (usize, usize),
-    (start2, repeat2): (usize, usize),
+    (start1, _repeat1): (usize, usize),
+    (start2, _repeat2): (usize, usize),
 ) -> (usize, usize) {
-    let mut common = (0..)
+    // First implementation without lcm
+    /*let mut common = (0..)
         .scan((0, 0, (1..), (1..)), |(n1, n2, i1, i2), _| {
             let result = (*n1, *n2);
             if start1 + *n1 * repeat1 < start2 + *n2 * repeat2 {
@@ -84,7 +86,11 @@ fn combine_patterns(
     let second = common.next().map(|(n, _)| start1 + repeat1 * n).unwrap();
     let third = common.next().map(|(n, _)| start1 + repeat1 * n).unwrap();
     assert_eq!(second - first, third - second);
-    (first, second - first)
+    (first, second - first)*/
+
+    // Assume steady loops from the start, use lcm
+    let x = start1.lcm(&start2);
+    (x, x)
 }
 fn part2(input: &str) -> usize {
     let (_, (instructions, map)) = parse(input).finish().unwrap();
