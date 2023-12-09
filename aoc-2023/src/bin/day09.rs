@@ -74,10 +74,8 @@ mod test_day09 {
     fn test_part2() {
         assert_eq!(part2(TEST_INPUT), 2);
     }
-    /*
     #[test]
     fn test_part2_puzzle() {
-        assert_eq!(part2(PUZZLE_INPUT), 6082852);
+        assert_eq!(part2(PUZZLE_INPUT), 1026);
     }
-    */
 }
