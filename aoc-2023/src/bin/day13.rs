@@ -114,7 +114,7 @@ fn part1(input: &str) -> usize {
 fn part2(input: &str) -> usize {
     let (_, model) = parse(input).finish().unwrap();
     model
-        .iter()
+        .par_iter()
         .map(|map| find_reflection_with_smudge(&map).unwrap())
         .map(|r| match r {
             Reflection::Horizontal(x) => x,
