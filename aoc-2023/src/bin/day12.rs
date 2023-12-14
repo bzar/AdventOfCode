@@ -1,13 +1,13 @@
-use itertools::Itertools;
 use nom::{
     branch::alt,
     character::complete as ncc,
     combinator::{all_consuming, value},
     multi::{many1, separated_list1},
-    sequence::{separated_pair, terminated, tuple},
+    sequence::{separated_pair, terminated},
     Finish,
 };
 use rayon::prelude::*;
+use std::collections::HashMap;
 const PUZZLE_INPUT: &str = include_str!("../data/day12.txt");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -17,7 +17,8 @@ enum Part {
     Unknown,
 }
 type Spring = Vec<Part>;
-type Groups = Vec<u32>;
+type Group = u32;
+type Groups = Vec<Group>;
 type Model = Vec<(Spring, Groups)>;
 
 fn parse(input: &str) -> nom::IResult<&str, Model> {
@@ -33,97 +34,60 @@ fn parse(input: &str) -> nom::IResult<&str, Model> {
     )))(input)
 }
 
-fn valid_up_to(spring: &Spring, groups: &Groups, limit: usize) -> bool {
-    if spring.len() < limit {
-        return false;
-    }
-    let mut iter = spring.iter().take(limit).peekable();
-    for group in groups {
-        if iter.peek().is_none() {
-            return true;
-        }
-        while iter.peek() == Some(&&Part::Working) {
-            iter.next();
-            if iter.peek().is_none() {
-                return true;
-            }
-        }
-        for _ in 0..*group {
-            if iter.peek().is_none() {
-                return true;
-            }
-            if iter.next() != Some(&Part::Broken) {
-                return false;
-            }
-        }
-        if iter.peek().is_none() {
-            return true;
-        }
-        if iter.peek() == Some(&&Part::Broken) {
-            return false;
-        }
-    }
-    return iter.all(|part| *part == Part::Working);
-}
-fn match_spring(spring: &Spring, groups: &Groups) -> bool {
-    let mut iter = spring.iter().peekable();
-    for group in groups {
-        while iter.peek() == Some(&&Part::Working) {
-            iter.next();
-        }
-        for _ in 0..*group {
-            if iter.next() != Some(&Part::Broken) {
-                return false;
-            }
-        }
-        if iter.peek() == Some(&&Part::Broken) {
-            return false;
-        }
-    }
-    return iter.all(|part| *part == Part::Working);
-}
-fn spring_configurations<'a>(
-    spring: &'a Spring,
-    groups: &'a Groups,
-) -> impl Iterator<Item = Spring> + 'a {
-    let total_broken: usize = groups.iter().sum::<u32>() as usize;
-    let mut stack = Vec::new();
-    stack.push(spring.clone());
-    let mut next = move || -> Option<Spring> {
-        while !stack.is_empty() {
-            let mut s = stack.pop()?;
-            while s.iter().filter(|part| **part == Part::Broken).count() > total_broken
-                || s.iter().filter(|part| **part != Part::Working).count() < total_broken
-            {
-                s = stack.pop()?;
-            }
-            if let Some((index, _)) = s.iter().find_position(|p| **p == Part::Unknown) {
-                for value in [Part::Working, Part::Broken] {
-                    let mut s = s.clone();
-                    s[index] = value;
-                    if valid_up_to(&s, &groups, index + 1) {
-                        stack.push(s);
-                    }
-                }
-            } else {
-                return Some(s);
-            }
-        }
-        None
-    };
-
-    (0..)
-        .map(move |_| next())
-        .take_while(|s| s.is_some())
-        .map(|s| s.unwrap())
-}
-
 fn arrangements(spring: &Spring, groups: &Groups) -> u128 {
-    spring_configurations(&spring, &groups)
-        .filter(|s| match_spring(s, &groups))
-        .fold(0u128, |sum, _solution| sum + 1)
+    fn hash(spring: &[Part], groups: &[Group], broken_count: u32) -> (String, usize, u32) {
+        let spring_chars: String = spring
+            .iter()
+            .map(|p| match p {
+                Part::Working => '.',
+                Part::Broken => '#',
+                Part::Unknown => '?',
+            })
+            .collect();
+        (spring_chars, groups.len(), broken_count)
+    }
+    fn arrangements_recursive(
+        spring: &[Part],
+        groups: &[Group],
+        broken_count: u32,
+        memo: &mut HashMap<(String, usize, u32), u128>,
+    ) -> u128 {
+        if let Some(result) = memo.get(&hash(spring, groups, broken_count)) {
+            return *result;
+        }
+        let result = match (spring.first(), groups.first()) {
+            (None, Some(n)) if *n != broken_count || groups.len() != 1 => 0,
+            (None, _) => 1,
+            (Some(Part::Broken), None) => 0,
+            (Some(Part::Broken), Some(n)) if broken_count >= *n => 0,
+            (Some(Part::Working), None) if broken_count == 0 => {
+                arrangements_recursive(&spring[1..], groups, 0, memo)
+            }
+            (Some(Part::Working), None) => 0,
+            (Some(Part::Working), Some(n)) if broken_count != 0 && *n == broken_count => {
+                arrangements_recursive(&spring[1..], &groups[1..], 0, memo)
+            }
+            (Some(Part::Working), Some(_)) if broken_count != 0 => 0,
+            (Some(Part::Working), Some(_)) => arrangements_recursive(&spring[1..], groups, 0, memo),
+            (Some(Part::Broken), Some(_)) => {
+                arrangements_recursive(&spring[1..], groups, broken_count + 1, memo)
+            }
+            (Some(Part::Unknown), _) => {
+                let mut a: Vec<_> = spring.iter().copied().collect();
+                a[0] = Part::Working;
+                let mut b: Vec<_> = spring.iter().copied().collect();
+                b[0] = Part::Broken;
+                let na = arrangements_recursive(&a, groups, broken_count, memo);
+                let nb = arrangements_recursive(&b, groups, broken_count, memo);
+                na + nb
+            }
+        };
+        memo.insert(hash(spring, groups, broken_count), result);
+        result
+    }
+    let mut memo = HashMap::new();
+    arrangements_recursive(spring, groups, 0, &mut memo)
 }
-
 fn part1(input: &str) -> u128 {
     let (_, model) = parse(input).finish().unwrap();
     model
@@ -149,26 +113,12 @@ fn unfold_spring(spring: &Spring, groups: &Groups, n: usize) -> (Spring, Groups)
             .collect(),
     )
 }
-fn unfolded_arrangements(spring: &Spring, groups: &Groups) -> u128 {
-    let (s2, g2) = unfold_spring(spring, groups, 2);
-    let (s3, g3) = unfold_spring(spring, groups, 3);
-    let n2 = arrangements(&s2, &g2);
-    let n3 = arrangements(&s3, &g3);
-    let mid = n3 / n2;
-
-    n2 * mid.pow(3)
-}
 fn part2(input: &str) -> u128 {
     let (_, model) = parse(input).finish().unwrap();
-    let n = model.len();
     model
         .par_iter()
-        .enumerate()
-        .map(|(i, x)| {
-            println!("{i}/{n}");
-            x
-        })
-        .map(|(spring, groups)| unfolded_arrangements(&spring, &groups))
+        .map(|(spring, groups)| unfold_spring(&spring, &groups, 5))
+        .map(|(spring, groups)| arrangements(&spring, &groups))
         .sum()
 }
 
@@ -209,10 +159,8 @@ mod test_day12 {
         assert_eq!(part2(TEST_INPUT), 525152);
     }
 
-    /*
     #[test]
     fn test_part2_puzzle() {
-        assert_eq!(part2(PUZZLE_INPUT), 544723432977);
+        assert_eq!(part2(PUZZLE_INPUT), 5071883216318);
     }
-    */
 }
