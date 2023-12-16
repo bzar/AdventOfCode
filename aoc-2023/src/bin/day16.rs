@@ -69,7 +69,6 @@ fn energize(model: &Model, beam: &Beam) -> usize {
 
             dirs.into_iter()
                 .filter_map(|d| Some((d.apply(pos)?, *d)))
-                .filter(|((x, y), _)| *x < model.width() && *y < model.height())
                 .for_each(|beam| stack.push(beam));
         }
     }
