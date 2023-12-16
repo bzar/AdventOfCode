@@ -1,11 +1,9 @@
-use itertools::Itertools;
 use nom::{
     branch::alt,
-    bytes::complete::tag,
     character::complete as ncc,
     combinator::{all_consuming, map, value},
-    multi::{many1, separated_list1},
-    sequence::{delimited, preceded, terminated, tuple},
+    multi::many1,
+    sequence::terminated,
     Finish,
 };
 use std::collections::{HashSet, VecDeque};
@@ -56,12 +54,6 @@ impl Pipe {
     }
 }
 impl Model {
-    fn width(&self) -> usize {
-        self.0.first().map(|row| row.len()).unwrap_or(0)
-    }
-    fn height(&self) -> usize {
-        self.0.len()
-    }
     fn tiles(&self) -> impl Iterator<Item = (usize, usize, &Option<Pipe>)> + '_ {
         self.0
             .iter()
@@ -140,29 +132,45 @@ fn part2(input: &str) -> Value {
                 .for_each(|(x, y, _)| queue.push_back((x, y)));
         }
     }
-    let horizontal: HashSet<_> = model
+
+    let inside: HashSet<_> = model
         .0
         .iter()
         .enumerate()
         .flat_map(|(y, row)| {
-            let mut on_pipe = false;
             let mut inside = false;
+            let mut prev_turn: Option<[Direction; 2]> = None;
             let visited = &visited;
             row.into_iter().enumerate().filter_map(move |(x, tile)| {
                 use Direction::*;
-                match (inside, tile) {
-                    (true, None) => Some((x, y)),
-                    (true, _) if !visited.contains(&(x, y)) => Some((x, y)),
-                    (_, Some(Pipe::FromTo([West, East]))) => None,
-                    (_, Some(Pipe::FromTo([North, South]))) if visited.contains(&(x, y)) => {
+                let on_pipe = visited.contains(&(x, y));
+                match (inside, on_pipe, tile) {
+                    (true, false, _) => Some((x, y)),
+                    (_, _, Some(Pipe::FromTo([West, East]))) => None,
+                    (_, true, Some(Pipe::FromTo([North, South]))) => {
                         inside = !inside;
                         None
                     }
-                    (_, Some(Pipe::FromTo(_))) if visited.contains(&(x, y)) => {
-                        on_pipe = !on_pipe;
-                        if !on_pipe {
+                    (_, true, Some(Pipe::FromTo([North, East]))) => {
+                        prev_turn = Some([North, East]);
+                        None
+                    }
+                    (_, true, Some(Pipe::FromTo([South, East]))) => {
+                        prev_turn = Some([South, East]);
+                        None
+                    }
+                    (_, true, Some(Pipe::FromTo([North, West]))) => {
+                        if prev_turn == Some([South, East]) {
                             inside = !inside;
                         }
+                        prev_turn = None;
+                        None
+                    }
+                    (_, true, Some(Pipe::FromTo([South, West]))) => {
+                        if prev_turn == Some([North, East]) {
+                            inside = !inside;
+                        }
+                        prev_turn = None;
                         None
                     }
                     _ => None,
@@ -172,41 +180,6 @@ fn part2(input: &str) -> Value {
         .inspect(|x| println!("- {x:?}"))
         .collect();
 
-    let vertical: HashSet<_> = (0..model.0.len())
-        .flat_map(|x| {
-            let mut on_pipe = false;
-            let mut inside = false;
-            let visited = &visited;
-            model
-                .0
-                .iter()
-                .enumerate()
-                .filter_map(move |(y, row)| {
-                    use Direction::*;
-                    let tile = row.get(x)?;
-                    match (inside, tile) {
-                        (true, None) => Some((x, y)),
-                        (true, _) if !visited.contains(&(x, y)) => Some((x, y)),
-                        (_, Some(Pipe::FromTo([North, South]))) => None,
-                        (_, Some(Pipe::FromTo([West, East]))) if visited.contains(&(x, y)) => {
-                            inside = !inside;
-                            None
-                        }
-                        (_, Some(Pipe::FromTo(_))) if visited.contains(&(x, y)) => {
-                            on_pipe = !on_pipe;
-                            if !on_pipe {
-                                inside = !inside;
-                            }
-                            None
-                        }
-                        _ => None,
-                    }
-                })
-                .inspect(|x| println!("| {x:?}"))
-        })
-        .collect();
-
-    let mut inside = vertical.intersection(&horizontal);
     model
         .0
         .iter()
@@ -227,7 +200,7 @@ fn part2(input: &str) -> Value {
         })
         .for_each(|row| println!("{row}"));
 
-    inside.count()
+    inside.len()
 }
 
 fn main() {
@@ -267,10 +240,8 @@ mod test_day10 {
                    .............\n";
         assert_eq!(part2(map), 5);
     }
-    /*
     #[test]
     fn test_part2_puzzle() {
-        assert_eq!(part2(PUZZLE_INPUT), 1026);
+        assert_eq!(part2(PUZZLE_INPUT), 451);
     }
-    */
 }
