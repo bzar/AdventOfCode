@@ -180,26 +180,6 @@ fn part2(input: &str) -> Value {
         .inspect(|x| println!("- {x:?}"))
         .collect();
 
-    model
-        .0
-        .iter()
-        .enumerate()
-        .map(|(y, row)| {
-            row.iter()
-                .enumerate()
-                .map(|(x, _)| {
-                    if visited.contains(&(x, y)) {
-                        'x'
-                    } else if inside.contains(&(x, y)) {
-                        'I'
-                    } else {
-                        'O'
-                    }
-                })
-                .collect::<String>()
-        })
-        .for_each(|row| println!("{row}"));
-
     inside.len()
 }
 
