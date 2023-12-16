@@ -1,3 +1,6 @@
+pub type Coord = usize;
+pub type Coords = (usize, usize);
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RectMap<T: Clone + core::fmt::Debug>(Vec<Vec<T>>);
 
@@ -53,5 +56,24 @@ impl<T: Clone + core::fmt::Debug> RectMap<T> {
         let value = self.0.get_mut(y)?.get_mut(x)?;
         *value = f(value);
         Some(value)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Direction {
+    East,
+    North,
+    West,
+    South,
+}
+
+impl Direction {
+    pub fn apply(&self, (x, y): Coords) -> Option<Coords> {
+        match self {
+            Direction::East => Some((x.checked_add(1)?, y)),
+            Direction::North => Some((x, y.checked_sub(1)?)),
+            Direction::West => Some((x.checked_sub(1)?, y)),
+            Direction::South => Some((x, y.checked_add(1)?)),
+        }
     }
 }
