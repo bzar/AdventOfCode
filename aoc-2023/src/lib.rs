@@ -1,3 +1,8 @@
+use std::{
+    collections::{BTreeMap, HashMap},
+    ops::Add,
+};
+
 pub type Coord = usize;
 pub type Coords = (usize, usize);
 
@@ -76,4 +81,60 @@ impl Direction {
             Direction::South => Some((x, y.checked_add(1)?)),
         }
     }
+    pub fn opposite(&self) -> Self {
+        match self {
+            Direction::East => Direction::West,
+            Direction::North => Direction::South,
+            Direction::West => Direction::East,
+            Direction::South => Direction::North,
+        }
+    }
+}
+pub fn astar<
+    Id: std::hash::Hash + Eq,
+    Node: Clone,
+    Distance: Ord + Default + Add<Output = Distance> + Copy,
+>(
+    start: Node,
+    node_id: impl Fn(&Node) -> Id,
+    neighbors: impl Fn(&Node) -> Vec<(Distance, Node)>,
+    is_goal: impl Fn(&Node) -> bool,
+) -> Option<Vec<Id>> {
+    let mut queue: BTreeMap<Distance, Vec<Node>> =
+        [(Distance::default(), vec![start.clone()])].into();
+    let mut parents: HashMap<Id, Node> = HashMap::new();
+
+    while let Some((&nd, ref node)) = queue
+        .iter_mut()
+        .find_map(|(p, xs)| xs.pop().map(|x| (p, x)))
+    {
+        if is_goal(&node) {
+            return (0..)
+                .scan(Some(node.clone()), move |pos, _| {
+                    if pos.is_none() {
+                        return None;
+                    }
+                    let node = pos.clone().unwrap();
+                    let id = node_id(&node);
+
+                    if node_id(&node) == node_id(&start) {
+                        *pos = None;
+                        Some(id)
+                    } else {
+                        *pos = Some(parents.get(&id)?.clone());
+                        Some(id)
+                    }
+                })
+                .collect::<Vec<_>>()
+                .into();
+        }
+        for (d, ref n) in neighbors(&node) {
+            let nid = node_id(n);
+            parents.entry(nid).or_insert_with(|| {
+                queue.entry(nd + d).or_default().push(n.clone());
+                node.clone()
+            });
+        }
+    }
+    None
 }
