@@ -76,14 +76,14 @@ fn energize(model: &Model, beam: &Beam) -> usize {
 }
 fn part1(input: &str) -> usize {
     let (_, model) = parse(input).finish().unwrap();
-    energize(&model, &((0, 0), Direction::East))
+    energize(&model, &([0, 0], Direction::East))
 }
 fn part2(input: &str) -> usize {
     let (_, model) = parse(input).finish().unwrap();
-    let east = (0..model.height()).map(|y| ((0, y), Direction::East));
-    let north = (0..model.width()).map(|x| ((x, model.height() - 1), Direction::North));
-    let west = (0..model.height()).map(|y| ((model.width() - 1, y), Direction::West));
-    let south = (0..model.width()).map(|x| ((x, 0), Direction::South));
+    let east = (0..model.height()).map(|y| ([0, y], Direction::East));
+    let north = (0..model.width()).map(|x| ([x, model.height() - 1], Direction::North));
+    let west = (0..model.height()).map(|y| ([model.width() - 1, y], Direction::West));
+    let south = (0..model.width()).map(|x| ([x, 0], Direction::South));
     east.chain(north)
         .chain(west)
         .chain(south)
@@ -114,6 +114,7 @@ mod test_day16 {
     fn test_part2() {
         assert_eq!(part2(TEST_INPUT), 51);
     }
+    #[test]
     fn test_part2_puzzle() {
         assert_eq!(part2(PUZZLE_INPUT), 7831);
     }

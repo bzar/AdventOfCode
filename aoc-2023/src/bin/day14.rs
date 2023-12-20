@@ -1,4 +1,4 @@
-use aoc_2023::RectMap;
+use aoc_2023::{Coord, RectMap};
 use nom::{
     branch::alt,
     character::complete as ncc,
@@ -30,7 +30,7 @@ fn parse(input: &str) -> nom::IResult<&str, Model> {
     ))(input)
 }
 
-fn part1(input: &str) -> usize {
+fn part1(input: &str) -> Coord {
     let (_, model) = parse(input).finish().unwrap();
     model
         .columns()
@@ -38,14 +38,14 @@ fn part1(input: &str) -> usize {
             column.enumerate().scan(None, |dst, (y, tile)| {
                 match (tile, dst.clone()) {
                     (Tile::Empty, None) => {
-                        *dst = Some(y);
+                        *dst = Some(y as Coord);
                         0
                     }
                     (Tile::Cube, _) => {
                         *dst = None;
                         0
                     }
-                    (Tile::Ball, None) => model.height() - y,
+                    (Tile::Ball, None) => model.height() - y as Coord,
                     (Tile::Ball, Some(dy)) => {
                         *dst = Some(dy + 1);
                         model.height() - dy
@@ -57,17 +57,17 @@ fn part1(input: &str) -> usize {
         })
         .sum()
 }
-fn calculate_load(model: &Model) -> usize {
+fn calculate_load(model: &Model) -> Coord {
     model
         .cells()
-        .filter_map(|((_, y), c)| (*c == Tile::Ball).then_some(model.height() - y))
+        .filter_map(|([_, y], c)| (*c == Tile::Ball).then_some(model.height() - y))
         .sum()
 }
 fn tilt_north(model: &mut Model) {
     for x in 0..model.width() {
         let mut dst = None;
         for y in 0..model.height() {
-            let tile = model.get((x, y)).unwrap();
+            let tile = model.get([x, y]).unwrap();
             match (tile, dst.clone()) {
                 (Tile::Empty, None) => {
                     dst = Some(y);
@@ -76,8 +76,8 @@ fn tilt_north(model: &mut Model) {
                     dst = None;
                 }
                 (Tile::Ball, Some(dy)) => {
-                    *model.get_mut((x, y)).unwrap() = Tile::Empty;
-                    *model.get_mut((x, dy)).unwrap() = Tile::Ball;
+                    *model.get_mut([x, y]).unwrap() = Tile::Empty;
+                    *model.get_mut([x, dy]).unwrap() = Tile::Ball;
                     dst = Some(dy + 1);
                 }
                 _ => (),
@@ -90,7 +90,7 @@ fn tilt_south(model: &mut Model) {
         let mut dst = None;
         let height = model.height();
         for y in (0..height).map(|y| height - y - 1) {
-            let tile = model.get((x, y)).unwrap();
+            let tile = model.get([x, y]).unwrap();
             match (tile, dst.clone()) {
                 (Tile::Empty, None) => {
                     dst = Some(y);
@@ -99,8 +99,8 @@ fn tilt_south(model: &mut Model) {
                     dst = None;
                 }
                 (Tile::Ball, Some(dy)) => {
-                    *model.get_mut((x, y)).unwrap() = Tile::Empty;
-                    *model.get_mut((x, dy)).unwrap() = Tile::Ball;
+                    *model.get_mut([x, y]).unwrap() = Tile::Empty;
+                    *model.get_mut([x, dy]).unwrap() = Tile::Ball;
                     if dy > 0 {
                         dst = Some(dy - 1);
                     }
@@ -114,7 +114,7 @@ fn tilt_west(model: &mut Model) {
     for y in 0..model.height() {
         let mut dst = None;
         for x in 0..model.width() {
-            let tile = model.get((x, y)).unwrap();
+            let tile = model.get([x, y]).unwrap();
             match (tile, dst.clone()) {
                 (Tile::Empty, None) => {
                     dst = Some(x);
@@ -123,8 +123,8 @@ fn tilt_west(model: &mut Model) {
                     dst = None;
                 }
                 (Tile::Ball, Some(dx)) => {
-                    *model.get_mut((x, y)).unwrap() = Tile::Empty;
-                    *model.get_mut((dx, y)).unwrap() = Tile::Ball;
+                    *model.get_mut([x, y]).unwrap() = Tile::Empty;
+                    *model.get_mut([dx, y]).unwrap() = Tile::Ball;
                     dst = Some(dx + 1);
                 }
                 _ => (),
@@ -137,7 +137,7 @@ fn tilt_east(model: &mut Model) {
         let mut dst = None;
         let width = model.width();
         for x in (0..width).map(|x| width - x - 1) {
-            let tile = model.get((x, y)).unwrap();
+            let tile = model.get([x, y]).unwrap();
             match (tile, dst.clone()) {
                 (Tile::Empty, None) => {
                     dst = Some(x);
@@ -146,8 +146,8 @@ fn tilt_east(model: &mut Model) {
                     dst = None;
                 }
                 (Tile::Ball, Some(dx)) => {
-                    *model.get_mut((x, y)).unwrap() = Tile::Empty;
-                    *model.get_mut((dx, y)).unwrap() = Tile::Ball;
+                    *model.get_mut([x, y]).unwrap() = Tile::Empty;
+                    *model.get_mut([dx, y]).unwrap() = Tile::Ball;
                     if dx > 0 {
                         dst = Some(dx - 1);
                     }
@@ -157,7 +157,7 @@ fn tilt_east(model: &mut Model) {
         }
     }
 }
-fn part2(input: &str) -> usize {
+fn part2(input: &str) -> Coord {
     let (_, mut model) = parse(input).finish().unwrap();
 
     let mut previous = HashMap::new();

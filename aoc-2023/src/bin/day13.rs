@@ -78,7 +78,7 @@ fn find_reflection_with_smudge(map: &Map) -> Option<Reflection> {
     let coords = (0..map.width()).cartesian_product(0..map.height());
     let smudged_reflections = coords.flat_map(|(x, y)| {
         let mut m = map.clone();
-        m.modify((x, y), |t| flip(t)).unwrap();
+        m.modify([x, y], |t| flip(t)).unwrap();
         find_reflections(&m).collect::<Vec<_>>().into_iter()
     });
 

@@ -1,6 +1,5 @@
-use aoc_2023::{astar, Coords, Direction, RectMap};
+use aoc_2023::{astar, Coord, Coords, Direction, RectMap};
 use nom::{
-    branch::alt,
     bytes::complete::take,
     character::complete as ncc,
     combinator::{all_consuming, map, map_parser},
@@ -8,8 +7,6 @@ use nom::{
     sequence::terminated,
     Finish,
 };
-use rayon::prelude::*;
-use std::collections::HashSet;
 
 const PUZZLE_INPUT: &str = include_str!("../data/day17.txt");
 
@@ -26,11 +23,11 @@ fn parse(input: &str) -> nom::IResult<&str, Model> {
 
 fn part1(input: &str) -> Cost {
     let (_, model) = parse(input).finish().unwrap();
-    let start = (0, 0);
-    let goal = (
-        model.width().saturating_sub(1),
-        model.height().saturating_sub(1),
-    );
+    let start = [0, 0];
+    let goal = [
+        model.width().saturating_sub(1) as Coord,
+        model.height().saturating_sub(1) as Coord,
+    ];
     type Node = (Coords, Direction, usize);
     let neighbors = |&(pos, dir, count): &Node| -> Vec<(Cost, Node)> {
         use Direction::*;
@@ -65,11 +62,11 @@ fn part1(input: &str) -> Cost {
 }
 fn part2(input: &str) -> Cost {
     let (_, model) = parse(input).finish().unwrap();
-    let start = (0, 0);
-    let goal = (
+    let start = [0, 0];
+    let goal = [
         model.width().saturating_sub(1),
         model.height().saturating_sub(1),
-    );
+    ];
     type Node = (Coords, Direction, usize);
     let neighbors = |&(pos, dir, count): &Node| -> Vec<(Cost, Node)> {
         use Direction::*;
