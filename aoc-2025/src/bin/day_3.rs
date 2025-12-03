@@ -20,10 +20,9 @@ fn maximum_joltage<const N: usize>(bank: &str) -> Output {
             };
             let (index, max) = chars.chars().enumerate().fold((0, '0'), first_max);
             *start = *start + index + 1;
-            Some((N - n - 1, max))
+            Some(max)
         })
-        .map(|(n, c): (usize, char)| c.to_digit(10).unwrap() as Output * 10u64.pow(n as u32))
-        .sum()
+        .fold(0, |sum, c| sum * 10 + c.to_digit(10).unwrap() as Output)
 }
 
 fn part_1(input: &Input) -> Output {
