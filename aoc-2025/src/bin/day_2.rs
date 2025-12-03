@@ -18,6 +18,7 @@ fn is_invalid(id: &Id) -> bool {
     let scale = (10 as Id).pow(num_digits / 2);
     return id / scale == id % scale;
 }
+
 fn part_1(input: &str) -> Id {
     let ranges = parser().parse(input).unwrap();
     ranges
@@ -30,20 +31,15 @@ fn part_1(input: &str) -> Id {
 fn is_invalid_2(id: &Id) -> bool {
     let num_digits = id.ilog10() + 1;
 
-    for n in 1..(num_digits / 2 + 1) {
-        if num_digits % n != 0 {
-            continue;
-        }
-        let groups = num_digits / n;
-        let scale = (10 as Id).pow(n);
-        let mut values = (0..groups).map(|g| id / scale.pow(g) % scale);
-        let first = values.next().unwrap();
-        if values.all(|v| v == first) {
-            return true;
-        }
-    }
-
-    false
+    (1..=num_digits / 2)
+        .filter(|n| num_digits % n == 0)
+        .any(|n| {
+            let groups = num_digits / n;
+            let scale = (10 as Id).pow(n);
+            let mut values = (0..groups).map(|g| id / scale.pow(g) % scale);
+            let first = values.next().unwrap();
+            values.all(|v| v == first)
+        })
 }
 
 fn part_2(input: &str) -> Id {
