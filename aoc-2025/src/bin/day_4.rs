@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use chumsky::prelude::*;
 
 const SAMPLE_DATA: &str = include_str!("day_4_sample.txt");
@@ -7,77 +5,80 @@ const PUZZLE_DATA: &str = include_str!("day_4_puzzle.txt");
 
 type Coord = isize;
 type Coords = (Coord, Coord);
-type Rolls = HashSet<Coords>;
 
 type Input<'a> = Vec<Vec<bool>>;
 type Output = usize;
 
-const ADJACENT: [(isize, isize); 8] = [
-    (-1, 0),
-    (1, 0),
-    (0, -1),
-    (0, 1),
-    (-1, -1),
-    (-1, 1),
-    (1, -1),
-    (1, 1),
-];
 fn parser<'src>() -> impl Parser<'src, &'src str, Input<'src>> {
     let cell = choice((just('@').to(true), just('.').to(false)));
     let line = cell.repeated().collect();
     line.separated_by(text::newline()).collect().padded()
 }
 
-fn input_to_rolls(input: &Input) -> Rolls {
+fn has_roll(&(x, y): &Coords, input: &Input) -> bool {
     input
-        .iter()
-        .enumerate()
-        .flat_map(|(y, row)| row.iter().enumerate().map(move |(x, cell)| (x, y, *cell)))
-        .filter_map(|(x, y, cell)| cell.then_some((x as isize, y as isize)))
-        .collect()
+        .get(y as usize)
+        .and_then(|row| row.get(x as usize))
+        .copied()
+        .unwrap_or(false)
 }
 
-fn part_1(input: &Input) -> Output {
-    let rolls = input_to_rolls(input);
-    rolls
-        .iter()
-        .filter(|coords| is_removable(*coords, &rolls))
-        .count()
+fn rolls(input: &Input) -> impl Iterator<Item = Coords> {
+    input.iter().enumerate().flat_map(|(y, row)| {
+        row.iter()
+            .enumerate()
+            .filter_map(move |(x, cell)| cell.then_some((x as isize, y as isize)))
+    })
 }
 
-fn is_removable(&(x, y): &Coords, rolls: &Rolls) -> bool {
+fn adjacent(&(x, y): &Coords, input: &Input) -> impl Iterator<Item = Coords> {
+    let y_min = (y - 1).max(0);
+    let y_max = (y + 1).min(input.len() as isize - 1);
+    let x_min = (x - 1).max(0);
+    let x_max = (x + 1).min(input[0].len() as isize - 1); // Assume non-zero rectangle shape
+    (y_min..=y_max)
+        .flat_map(move |y| (x_min..=x_max).map(move |x| (x, y)))
+        .filter(move |(ax, ay)| *ax != x || *ay != y)
+}
+
+fn is_removable(coords: &Coords, input: &Input) -> bool {
     let mut count = 0;
-    for (dx, dy) in ADJACENT {
-        if rolls.contains(&(x + dx, y + dy)) {
+    for adj in adjacent(coords, input) {
+        if has_roll(&adj, input) {
             count += 1;
-        }
-        if count >= 4 {
-            return false;
+
+            if count >= 4 {
+                return false;
+            }
         }
     }
     true
 }
-fn find_removable(rolls: &HashSet<Coords>) -> Vec<Coords> {
-    rolls
-        .iter()
-        .filter(|coords| is_removable(*coords, rolls))
-        .copied()
+
+fn find_removable(input: &Input) -> Vec<Coords> {
+    rolls(input)
+        .filter(|coords| is_removable(coords, input))
         .collect()
 }
+
+fn part_1(input: &Input) -> Output {
+    rolls(input)
+        .filter(|coords| is_removable(coords, input))
+        .count()
+}
+
 fn part_2(input: &Input) -> Output {
-    let mut rolls = input_to_rolls(input);
+    let mut map = input.clone();
 
-    let initial_count = rolls.len();
-
-    while let removable = find_removable(&rolls)
+    while let removable = find_removable(&map)
         && !removable.is_empty()
     {
-        for roll in removable {
-            rolls.remove(&roll);
+        for (ax, ay) in removable {
+            map[ay as usize][ax as usize] = false;
         }
     }
 
-    initial_count - rolls.len()
+    rolls(input).count() - rolls(&map).count()
 }
 
 fn main() {
