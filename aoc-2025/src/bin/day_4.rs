@@ -57,19 +57,24 @@ fn is_removable(&(x, y): &Coords, rolls: &Rolls) -> bool {
     }
     true
 }
-fn find_removable(rolls: &HashSet<(isize, isize)>) -> Option<(isize, isize)> {
+fn find_removable(rolls: &HashSet<Coords>) -> Vec<Coords> {
     rolls
         .iter()
-        .find(|coords| is_removable(*coords, rolls))
+        .filter(|coords| is_removable(*coords, rolls))
         .copied()
+        .collect()
 }
 fn part_2(input: &Input) -> Output {
     let mut rolls = input_to_rolls(input);
 
     let initial_count = rolls.len();
 
-    while let Some(roll) = find_removable(&rolls) {
-        rolls.remove(&roll);
+    while let removable = find_removable(&rolls)
+        && !removable.is_empty()
+    {
+        for roll in removable {
+            rolls.remove(&roll);
+        }
     }
 
     initial_count - rolls.len()
