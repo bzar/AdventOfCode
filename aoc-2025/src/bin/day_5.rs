@@ -36,41 +36,22 @@ fn part_1((ranges, items): &Input) -> Output {
         .count() as Number
 }
 
-fn merge_ranges(a: &Range, b: &Range) -> Option<Range> {
-    if b.contains(a.start()) {
-        Some(*b.start()..=*b.end().max(a.end()))
-    } else if a.contains(b.start()) {
-        Some(*a.start()..=*b.end().max(a.end()))
-    } else {
-        None
-    }
-}
 fn part_2((ranges, _): &Input) -> Output {
     let mut ranges = ranges.clone();
     ranges.sort_by_key(|r| *r.start());
 
-    loop {
-        let mut next_ranges = Vec::new();
-
-        let mut i = 0;
-        while i < ranges.len() {
-            if let Some(other) = ranges.get(i + 1)
-                && let Some(merged) = merge_ranges(&ranges[i], other)
-            {
-                next_ranges.push(merged);
-                i += 1;
+    ranges
+        .into_iter()
+        .scan(0u64, |progress, range| {
+            if *progress <= *range.end() {
+                let count = *range.end() - (*progress).max(*range.start()) + 1;
+                *progress = *range.end() + 1;
+                Some(count)
             } else {
-                next_ranges.push(ranges[i].clone());
+                Some(0)
             }
-            i += 1;
-        }
-        std::mem::swap(&mut ranges, &mut next_ranges);
-        if next_ranges.len() == ranges.len() {
-            break;
-        }
-    }
-
-    ranges.into_iter().map(|r| r.end() - r.start() + 1).sum()
+        })
+        .sum()
 }
 
 fn main() {
