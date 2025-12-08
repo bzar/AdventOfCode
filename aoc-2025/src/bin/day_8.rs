@@ -32,7 +32,41 @@ fn distance_sq((x0, y0, z0): &Junction, (x1, y1, z1): &Junction) -> Coord {
     );
     dx * dx + dy * dy + dz * dz
 }
-fn part_1(input: &Input, num_connections: usize) -> Output {
+
+fn connect(
+    i: usize,
+    j: usize,
+    junction_circuits: &mut Vec<usize>,
+    circuits: &mut Vec<HashSet<usize>>,
+) {
+    let jci = junction_circuits[i];
+    let jcj = junction_circuits[j];
+
+    if jci == jcj {
+        return; // Same circuit
+    }
+
+    let (src, dst) = if circuits[jci].len() > circuits[jcj].len() {
+        (jcj, jci)
+    } else {
+        (jci, jcj)
+    };
+
+    let mut moved = HashSet::new();
+    std::mem::swap(&mut moved, &mut circuits[src]);
+    for k in moved {
+        circuits[dst].insert(k);
+        junction_circuits[k] = dst;
+    }
+}
+
+fn distances_circuits_junction_circuits(
+    input: &Input,
+) -> (
+    Vec<(Coord, (usize, usize))>,
+    Vec<HashSet<usize>>,
+    Vec<usize>,
+) {
     let n = input.len();
     let pairs = (0..n).flat_map(|i| ((i + 1)..n).map(move |j| (i, j)));
     let mut distances: Vec<_> = pairs
@@ -40,36 +74,19 @@ fn part_1(input: &Input, num_connections: usize) -> Output {
         .collect();
     distances.sort();
 
-    let mut circuits: Vec<_> = (0..n)
+    let circuits: Vec<_> = (0..n)
         .map(|i| [i].into_iter().collect::<HashSet<_>>())
         .collect();
-    let mut junction_circuits: Vec<_> = (0..n).map(|i| i).collect();
-    let mut connections = 0;
+    let junction_circuits: Vec<_> = (0..n).map(|i| i).collect();
 
-    for (_distance, (i, j)) in distances {
-        connections += 1;
-        if connections > num_connections {
-            break;
-        }
-        let jci = junction_circuits[i];
-        let jcj = junction_circuits[j];
+    (distances, circuits, junction_circuits)
+}
+fn part_1(input: &Input, num_connections: usize) -> Output {
+    let (distances, mut circuits, mut junction_circuits) =
+        distances_circuits_junction_circuits(input);
 
-        if jci == jcj {
-            continue; // Same circuit
-        }
-
-        let (src, dst) = if circuits[jci].len() > circuits[jcj].len() {
-            (jcj, jci)
-        } else {
-            (jci, jcj)
-        };
-
-        let mut moved = HashSet::new();
-        std::mem::swap(&mut moved, &mut circuits[src]);
-        for k in moved {
-            circuits[dst].insert(k);
-            junction_circuits[k] = dst;
-        }
+    for (_distance, (i, j)) in distances.iter().take(num_connections) {
+        connect(*i, *j, &mut junction_circuits, &mut circuits);
     }
 
     circuits.sort_by_key(|c| c.len());
@@ -82,38 +99,11 @@ fn part_1(input: &Input, num_connections: usize) -> Output {
 }
 
 fn part_2(input: &Input) -> Output {
-    let n = input.len();
-    let pairs = (0..n).flat_map(|i| ((i + 1)..n).map(move |j| (i, j)));
-    let mut distances: Vec<_> = pairs
-        .map(|(i, j)| (distance_sq(&input[i], &input[j]), (i, j)))
-        .collect();
-    distances.sort();
-
-    let mut circuits: Vec<_> = (0..n)
-        .map(|i| [i].into_iter().collect::<HashSet<_>>())
-        .collect();
-    let mut junction_circuits: Vec<_> = (0..n).map(|i| i).collect();
+    let (distances, mut circuits, mut junction_circuits) =
+        distances_circuits_junction_circuits(input);
 
     for (_distance, (i, j)) in distances {
-        let jci = junction_circuits[i];
-        let jcj = junction_circuits[j];
-
-        if jci == jcj {
-            continue; // Same circuit
-        }
-
-        let (src, dst) = if circuits[jci].len() > circuits[jcj].len() {
-            (jcj, jci)
-        } else {
-            (jci, jcj)
-        };
-
-        let mut moved = HashSet::new();
-        std::mem::swap(&mut moved, &mut circuits[src]);
-        for k in moved {
-            circuits[dst].insert(k);
-            junction_circuits[k] = dst;
-        }
+        connect(i, j, &mut junction_circuits, &mut circuits);
 
         if circuits.iter().filter(|c| !c.is_empty()).count() == 1 {
             return input[i].0 * input[j].0;
