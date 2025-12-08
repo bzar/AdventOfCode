@@ -20,6 +20,8 @@ name = "day_5"
 name = "day_6"
 [[bin]]
 name = "day_7"
+[[bin]]
+name = "day_8"
 
 [profile.release]
 debug = true
