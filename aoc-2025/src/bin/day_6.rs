@@ -71,27 +71,14 @@ fn puzzle_tokens_2(puzzle: &Vec<String>) -> impl Iterator<Item = Token> {
     };
     let cols = puzzle[0].len();
     let numbers = (0..cols)
-        .flat_map(|col| {
-            let line: String = number_lines
+        .map(|col| {
+            number_lines
                 .iter()
                 .map(|line| &line[col..col + 1])
-                .collect();
-            line.split_whitespace()
-                .map(|s| s.to_owned())
-                .collect::<Vec<String>>()
-                .into_iter()
+                .collect::<String>()
         })
-        .map(|line| {
-            if let Ok(number) = line.trim().parse::<Number>() {
-                Token::Number(number)
-            } else if line.contains('+') {
-                Token::Operator(Operator::Add)
-            } else if line.contains('*') {
-                Token::Operator(Operator::Mul)
-            } else {
-                panic!("Unexpected input: {}", line);
-            }
-        });
+        .map(|line| Token::Number(line.trim().parse().unwrap()));
+
     [Token::Operator(operator)].into_iter().chain(numbers)
 }
 

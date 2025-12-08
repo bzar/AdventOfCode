@@ -22,42 +22,32 @@ fn parser<'src>() -> impl Parser<'src, &'src str, Input> {
     line.repeated().collect()
 }
 
-fn part_1(input: &Input) -> Output {
-    let mut lines = input.iter();
-    let first_line = lines.next().unwrap();
-    let width = first_line.len();
-    let start = first_line
-        .iter()
-        .position(|t| *t == Token::Start)
-        .expect("No start on first line!");
-    let mut beams = Vec::new();
-    beams.resize(width, false);
-    beams[start] = true;
-
+fn split_beams<'a>(beams: &mut Vec<Output>, lines: impl Iterator<Item = &'a Vec<Token>>) -> Output {
     let mut count = 0;
     for line in lines {
-        let split_beams: Vec<_> = beams
-            .iter()
+        let split_beams = beams
+            .clone()
+            .into_iter()
             .zip(line.iter())
             .enumerate()
-            .filter_map(|(i, (b, t))| (*b && *t == Token::Splitter).then_some(i))
-            .collect();
+            .filter_map(|(i, (b, t))| (b > 0 && *t == Token::Splitter).then_some(i));
 
         for split_index in split_beams {
-            count += 1;
-            beams[split_index] = false;
             if split_index > 0 {
-                beams[split_index - 1] = true;
+                beams[split_index - 1] += beams[split_index];
             }
             if split_index < beams.len() - 1 {
-                beams[split_index + 1] = true;
+                beams[split_index + 1] += beams[split_index];
             }
+            beams[split_index] = 0;
+
+            count += 1;
         }
     }
+
     count
 }
-
-fn part_2(input: &Input) -> Output {
+fn beams_and_lines(input: &Input) -> (Vec<Output>, impl Iterator<Item = &Vec<Token>>) {
     let mut lines = input.iter();
     let first_line = lines.next().unwrap();
     let width = first_line.len();
@@ -69,24 +59,16 @@ fn part_2(input: &Input) -> Output {
     beams.resize(width, 0);
     beams[start] = 1;
 
-    for line in lines {
-        let split_beams: Vec<_> = beams
-            .iter()
-            .zip(line.iter())
-            .enumerate()
-            .filter_map(|(i, (b, t))| (*b > 0 && *t == Token::Splitter).then_some(i))
-            .collect();
+    (beams, lines)
+}
+fn part_1(input: &Input) -> Output {
+    let (mut beams, lines) = beams_and_lines(input);
+    split_beams(&mut beams, lines)
+}
 
-        for split_index in split_beams {
-            if split_index > 0 {
-                beams[split_index - 1] += beams[split_index];
-            }
-            if split_index < beams.len() - 1 {
-                beams[split_index + 1] += beams[split_index];
-            }
-            beams[split_index] = 0;
-        }
-    }
+fn part_2(input: &Input) -> Output {
+    let (mut beams, lines) = beams_and_lines(input);
+    split_beams(&mut beams, lines);
     beams.iter().sum()
 }
 
